@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/database/20250613_outside_service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/database/20250613_语音转文字api.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/database/20250618_和风天气api.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/database/20250618_高德地图api.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/database/20250619_和风天气之格点逐小时天气预报.sql" dialect="MySQL" />
+  </component>
+</project>

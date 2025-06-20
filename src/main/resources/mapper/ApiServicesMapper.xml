@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.mapper.ApiServicesMapper">
+
+    <select id="getServices" resultType="hashmap" parameterType="hashmap">
+        select
+        id,
+        name,
+        description,
+        base_url,
+        api_key,
+        api_secret,
+        auth_type,
+        headers,
+        timeout,
+        retry_count,
+        retry_delay,
+        is_active,
+        created_at,
+        updated_at
+        from api_services
+        <where>
+            <if test="serviceId != null">
+                and id = #{serviceId}  <!-- 修正：service_id -> id -->
+            </if>
+            <if test="serviceName != null">
+                and name = #{serviceName}  <!-- 修正：service_name -> name -->
+            </if>
+        </where>
+    </select>
+</mapper>

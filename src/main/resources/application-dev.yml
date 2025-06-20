@@ -1,0 +1,13 @@
+sky:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    host: 192.168.232.128
+    port: 3306
+    database: demo
+    username: root
+    password: 160424
+  redis:
+    host: 192.168.232.128
+    port: 6379
+    password: 160424
+    database: 0
