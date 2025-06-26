@@ -1,6 +1,7 @@
 package org.example;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.io.FileUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,11 @@ import org.example.service.EndPointsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -101,6 +107,32 @@ public class HttpClientTest {
     @Test
     public void doPostTest3() throws Exception {
         HttpClient.doPostTest2();
+    }
+
+    @Test
+    public void doPostTest4() throws Exception {
+        Map reqParams = new HashMap<>();
+        reqParams.put("SERVICE_URL", "https://luckycola.com.cn");
+        reqParams.put("PATH", "/openOcr/baseOCR");
+        reqParams.put("TIMEOUT", 5000);
+        Map params = new HashMap<>();
+        File file = new File("C:/Users/faker/Pictures/截图45424.png");
+        if (!file.exists()){
+            System.out.println("文件不存在");
+            return;
+        }
+        String fileType = FileUtil.getType(file);
+        byte[] bytes = FileUtil.readBytes(file);
+        String base64 = Base64.getEncoder().encodeToString(bytes);
+        File outFile = new File("D:\\Workspace\\lx\\HttpClientDemo\\base64.txt");
+        FileUtil.writeString(base64, outFile, StandardCharsets.UTF_8);
+        params.put("imgBase64", "data:image/" + fileType+ ";" + "base64," + base64);
+        params.put("appKey", "685b94f6a885e6e36983d4e3");
+        params.put("uid", "H43Sy31750832374601r0NFkE0LeG");
+        reqParams.put("PARAMS", params);
+
+        Map result = HttpClientUtils.doPost(reqParams);
+        System.out.println("响应结果: " + result);
     }
 
 

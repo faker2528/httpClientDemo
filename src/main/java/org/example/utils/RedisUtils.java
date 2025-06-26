@@ -1,25 +1,103 @@
 package org.example.utils;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Redis操作工具类
+ * Redis操作工具类（增强版）
  * 提供基于Spring Data Redis的通用操作方法，支持String、Set、Hash、List等数据结构
- * 采用泛型设计提高类型安全性，完善异常处理和注释说明
+ * 增加分布式锁、Lua脚本执行和批量操作功能
  */
 @Component
 @SuppressWarnings("unchecked")
 @RequiredArgsConstructor
+@Slf4j
 public class RedisUtils {
 
-    private final RedisTemplate redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    // 锁释放Lua脚本（保证原子性）
+    private static final RedisScript<Long> UNLOCK_SCRIPT;
+
+    static {
+        StringBuilder script = new StringBuilder();
+        script.append("if redis.call('GET', KEYS[1]) == ARGV[1] then ");
+        script.append("    return redis.call('DEL', KEYS[1]) ");
+        script.append("else ");
+        script.append("    return 0 ");
+        script.append("end");
+        UNLOCK_SCRIPT = new DefaultRedisScript<>(script.toString(), Long.class);
+    }
+
+    // ====================== 分布式锁操作 ======================
+
+    /**
+     * 尝试获取分布式锁（SETNX + EXPIRE原子操作）
+     *
+     * @param key        锁键
+     * @param value      锁值（建议使用UUID等唯一值）
+     * @param expireTime 过期时间
+     * @param timeUnit   时间单位
+     * @return 是否获取成功
+     */
+    public boolean tryLock(String key, String value, long expireTime, TimeUnit timeUnit) {
+        Boolean result = redisTemplate.opsForValue().setIfAbsent(key, value, expireTime, timeUnit);
+        return result != null && result;
+    }
+
+    /**
+     * 释放分布式锁（使用Lua脚本保证原子性）
+     *
+     * @param key   锁键
+     * @param value 锁值
+     * @return 释放结果（1表示成功，0表示锁已过期或被其他线程持有）
+     */
+    public Long unlock(String key, String value) {
+        return redisTemplate.execute(UNLOCK_SCRIPT, Collections.singletonList(key), value);
+    }
+
+    /**
+     * 带重试机制的获取锁方法
+     *
+     * @param key        锁键
+     * @param value      锁值
+     * @param expireTime 锁过期时间
+     * @param timeUnit   时间单位
+     * @param retryTimes 重试次数
+     * @param waitTime   重试间隔时间（毫秒）
+     * @return 是否获取成功
+     */
+    public boolean tryLockWithRetry(String key, String value, long expireTime, TimeUnit timeUnit,
+                                    int retryTimes, long waitTime) {
+        boolean locked = tryLock(key, value, expireTime, timeUnit);
+        if (locked) {
+            return true;
+        }
+
+        for (int i = 0; i < retryTimes; i++) {
+            try {
+                Thread.sleep(waitTime);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+            locked = tryLock(key, value, expireTime, timeUnit);
+            if (locked) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     // ====================== 通用操作 ======================
 
@@ -144,6 +222,33 @@ public class RedisUtils {
         return redisTemplate.opsForValue().increment(key, delta);
     }
 
+    /**
+     * 删除指定key
+     *
+     * @param key 键，不能为空
+     * @return 删除结果，true表示成功
+     */
+    public boolean delete(String key) {
+        if (key == null) {
+            log.warn("key不能为空");
+            return false;
+        }
+        return redisTemplate.delete(key);
+    }
+
+    /**
+     * 批量删除多个key
+     *
+     * @param keys 键集合
+     * @return 删除的键数量
+     */
+    public long delete(Set<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return 0;
+        }
+        return redisTemplate.delete(keys);
+    }
+
     // ====================== Set类型操作 ======================
 
     /**
@@ -246,7 +351,6 @@ public class RedisUtils {
         return result == null ? 0L : result;
     }
 
-
     /**
      * 获取两个Set的差集
      *
@@ -311,7 +415,7 @@ public class RedisUtils {
      * @param hashKeys 要删除的字段名（可变参数）
      * @return 删除的字段数量
      */
-    public long delete(String key, String... hashKeys) {
+    public long deleteHashFields(String key, String... hashKeys) {
         return redisTemplate.opsForHash().delete(key, (Object) hashKeys);
     }
 
@@ -323,7 +427,7 @@ public class RedisUtils {
      * @param delta    递增步长，可为负数
      * @return 递增后的值
      */
-    public Long increment(String key, String hashKey, long delta) {
+    public Long incrementHash(String key, String hashKey, long delta) {
         return redisTemplate.opsForHash().increment(key, hashKey, delta);
     }
 
@@ -335,7 +439,7 @@ public class RedisUtils {
      * @param delta    递增步长，可为负数
      * @return 递增后的值
      */
-    public Double increment(String key, String hashKey, double delta) {
+    public Double incrementHash(String key, String hashKey, double delta) {
         return redisTemplate.opsForHash().increment(key, hashKey, delta);
     }
 
@@ -374,7 +478,6 @@ public class RedisUtils {
         return result == null ? -1L : result;
     }
 
-
     /**
      * 在List中指定元素前插入新元素
      *
@@ -397,7 +500,8 @@ public class RedisUtils {
      * @return 添加后的List长度，若pivot不存在则返回-1
      */
     public long rightPushAfter(String key, Object pivot, Object value) {
-        return redisTemplate.opsForList().rightPush(key, pivot, value);
+        Long result = redisTemplate.opsForList().rightPush(key, pivot, value);
+        return result == null ? -1L : result;
     }
 
     /**
@@ -492,9 +596,9 @@ public class RedisUtils {
     /**
      * 从List左侧阻塞弹出元素
      *
-     * @param key    键，不能为空
+     * @param key     键，不能为空
      * @param timeout 超时时间
-     * @param unit   时间单位
+     * @param unit    时间单位
      * @return 弹出的元素，若超时则返回null
      */
     public <T> T leftPop(String key, long timeout, TimeUnit unit) {
@@ -514,9 +618,9 @@ public class RedisUtils {
     /**
      * 从List右侧阻塞弹出元素
      *
-     * @param key    键，不能为空
+     * @param key     键，不能为空
      * @param timeout 超时时间
-     * @param unit   时间单位
+     * @param unit    时间单位
      * @return 弹出的元素，若超时则返回null
      */
     public <T> T rightPop(String key, long timeout, TimeUnit unit) {
@@ -564,7 +668,7 @@ public class RedisUtils {
      * @param index 索引（0-based）
      * @param value 新值，不能为空
      */
-    public void set(String key, long index, Object value) {
+    public void setListValue(String key, long index, Object value) {
         redisTemplate.opsForList().set(key, index, value);
     }
 
@@ -576,7 +680,42 @@ public class RedisUtils {
      * @param value 元素值
      * @return 移除的元素数量
      */
-    public long remove(String key, long count, Object value) {
+    public long removeListValue(String key, long count, Object value) {
         return redisTemplate.opsForList().remove(key, count, value);
+    }
+
+    // ====================== Lua脚本操作 ======================
+
+    /**
+     * 执行Lua脚本（简化版）
+     *
+     * @param script   Lua脚本
+     * @param returnType 返回类型
+     * @param args     参数列表
+     * @param <T>      返回类型泛型
+     * @return 执行结果
+     */
+    public <T> T executeLua(String script, Class<T> returnType, Object... args) {
+        DefaultRedisScript<T> redisScript = new DefaultRedisScript<>();
+        redisScript.setScriptText(script);
+        redisScript.setResultType(returnType);
+        return redisTemplate.execute(redisScript, Collections.emptyList(), args);
+    }
+
+    /**
+     * 执行Lua脚本（完整版本）
+     *
+     * @param script   Lua脚本
+     * @param returnType 返回类型
+     * @param keys     键列表
+     * @param args     参数列表
+     * @param <T>      返回类型泛型
+     * @return 执行结果
+     */
+    public <T> T executeLua(String script, Class<T> returnType, List<String> keys, Object... args) {
+        DefaultRedisScript<T> redisScript = new DefaultRedisScript<>();
+        redisScript.setScriptText(script);
+        redisScript.setResultType(returnType);
+        return redisTemplate.execute(redisScript, keys, args);
     }
 }

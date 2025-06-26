@@ -145,12 +145,14 @@ public class HttpClientUtils {
 
     private static Map<String, Object> executePostRequest(Map<String, Object> reqParams) throws Exception {
         Map<String, Object> result = new HashMap<>();
-        String serviceUrl = buildUrl(reqParams);
+        String baseUrl = Objects.toString(reqParams.get("SERVICE_URL"), "");
+        String path = Objects.toString(reqParams.get("PATH"), "");
+        String serviceUrl = baseUrl + path;
         log.info("doPost请求地址：{}", serviceUrl);
         Map<String, String> headers = getHeaders(reqParams);
         int timeout = getTimeout(reqParams);
         String contentType = Objects.toString(reqParams.get("CONTENT_TYPE"), "application/json");
-        Object bodyObj = reqParams.get("BODY");
+        Map bodyMap = (Map) reqParams.get("PARAMS");
 
         SSLConnectionSocketFactory sslsf = createSSLConnectionSocketFactory();
 
@@ -173,13 +175,13 @@ public class HttpClientUtils {
             }
 
             // 设置请求体
-            HttpEntity entity = buildPostEntity(bodyObj, contentType);
+            HttpEntity entity = buildPostEntity(bodyMap, contentType);
             if (entity != null) {
                 httpPost.setEntity(entity);
             }
 
             log.info("执行POST请求: {}, 内容类型: {}, 请求体: {}",
-                    serviceUrl, contentType, bodyObj != null ? bodyObj.toString() : "null");
+                    serviceUrl, contentType, bodyMap != null ? bodyMap.toString() : "null");
 
             // 执行请求并处理响应
             try (CloseableHttpResponse response = httpClient.execute(httpPost)) {

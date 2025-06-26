@@ -4,14 +4,17 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-// Spring Boot后端配置示例
 @Configuration
 public class CorsConfiguration implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("*")
+                // 设置允许的域名，不能使用*，因为withCredentials=true
+                .allowedOriginPatterns("http://localhost:5173")
+                .allowCredentials(true) // 允许携带凭证
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
-                .allowedHeaders("*");
+                .allowedHeaders("*")
+                // 暴露自定义响应头，用于传递验证码UUID
+                .exposedHeaders("X-Captcha-UUID");
     }
 }
