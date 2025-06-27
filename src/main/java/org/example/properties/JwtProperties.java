@@ -17,4 +17,5 @@ public class JwtProperties {
     private long ttl; //jwt令牌过期时间，单位毫秒
     private String tokenName; //前端请求的jwt令牌名称
     private String filePath; // 存储jwt密钥的文件路径
+    private String publicKeyPem; // jwt公钥
 }

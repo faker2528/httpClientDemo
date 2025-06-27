@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @Slf4j
-@RequestMapping("/news")
+@RequestMapping("/api/news")
 public class NewsController {
 
     @Autowired

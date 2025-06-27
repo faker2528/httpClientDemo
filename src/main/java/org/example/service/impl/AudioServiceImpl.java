@@ -22,12 +22,13 @@ public class AudioServiceImpl implements AudioService {
     private final ApiService apiService;
     private final EndPointsService endPointsService;
     private final RedisUtils redisUtils;
+    private final static String AUDIO_KEY_PREFIX = "audio:";
 
     @Override
     public GenericResult transferText(String text, String speed) throws Exception {
         GenericResult result = new GenericResult();
 
-        GenericResult cacheRes = redisUtils.get("audio_" + text);
+        GenericResult cacheRes = redisUtils.get(AUDIO_KEY_PREFIX+ text);
         if (cacheRes != null && !cacheRes.getDataList().isEmpty()) {
             log.info("从缓存中获取语音数据: {}", cacheRes);
             return cacheRes;
@@ -55,7 +56,7 @@ public class AudioServiceImpl implements AudioService {
         Map dataMap = new HashMap<>();
         dataMap.put("data", data);
         result.addData(dataMap);
-        redisUtils.set("audio_" + text, result, 60*60*24*30);
+        redisUtils.set(AUDIO_KEY_PREFIX+ text, result, 60*60*24*30);
         return result;
     }
 }

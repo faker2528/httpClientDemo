@@ -66,3 +66,4 @@ demo:
     ttl: 7200000
     token-name: Authorization
     file-path: doc/ed25519_private_key.pem
+    public-key-pem: MCowBQYDK2VwAyEAUsPxnZvavKJg/gAHNO9vDzMrnHgeFlPQAPvELxPKN5U=

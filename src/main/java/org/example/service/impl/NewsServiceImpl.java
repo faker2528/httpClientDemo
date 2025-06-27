@@ -18,13 +18,14 @@ import java.util.Map;
 public class NewsServiceImpl implements NewsService {
 
     private final RedisUtils redisUtils;
+    private final static String NEWS_KEY_PREFIX = "news:";
 
     @Override
     public GenericResult getNews() {
         GenericResult result = new GenericResult();
 
         // 先查缓存
-        GenericResult cacheRes = redisUtils.get("news");
+        GenericResult cacheRes = redisUtils.get(NEWS_KEY_PREFIX +"news");
         if (cacheRes != null && !cacheRes.getDataList().isEmpty()) {
             log.info("从缓存中获取数据: {}", cacheRes);
             return cacheRes;
@@ -51,7 +52,7 @@ public class NewsServiceImpl implements NewsService {
             return result;
         }
         // 将数据存入缓存
-        redisUtils.set("news", result, 60*60*6);
+        redisUtils.set(NEWS_KEY_PREFIX +"news", result, 60*60*6);
         return result;
     }
 }

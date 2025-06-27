@@ -2,15 +2,20 @@ package org.example.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.generic.GenericResult;
+import org.example.properties.JwtProperties;
+import org.example.utils.JwtUtils;
 import org.example.utils.RedisUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @RestController
-@RequestMapping()
+@RequestMapping("/api")
 @Slf4j
 @RequiredArgsConstructor
 public class AuthController {
@@ -20,10 +25,12 @@ public class AuthController {
     private static final long LOCK_TIME = 1; // 锁定时间（小时）
 
     private final RedisUtils redisUtils;
+    private final JwtUtils jwtUtils;
+    private final JwtProperties jwtProperties;
 
     @PostMapping("/login")
     public GenericResult login(@RequestParam("username") String username, @RequestParam("password") String password,
-                            @RequestParam("uuid") String uuid, @RequestParam("captcha") String captcha){
+                            @RequestParam("uuid") String uuid, @RequestParam("captcha") String captcha) throws Exception {
 
         log.info("请求登录：username: {}, password: {}, uuid: {}, captcha: {}", username, password, uuid, captcha);
         GenericResult result = new GenericResult();
@@ -82,6 +89,9 @@ public class AuthController {
         log.info("登录成功，{},{},{},{}", username, password, uuid, captcha);
         result.setFlag("0");
         result.setPrompt("登录成功");
+        Map<String, Object> dataMap = new HashMap<>();
+        dataMap.put(jwtProperties.getTokenName(), jwtUtils.generateHeWeatherJwt());
+        result.addData(dataMap);
 
         return result;
     }
