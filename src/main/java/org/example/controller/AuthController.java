@@ -1,7 +1,9 @@
 package org.example.controller;
+import cn.hutool.crypto.digest.BCrypt;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.generic.GenericResult;
+import org.example.mapper.UserMapper;
 import org.example.properties.JwtProperties;
 import org.example.utils.JwtUtils;
 import org.example.utils.RedisUtils;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +30,7 @@ public class AuthController {
     private final RedisUtils redisUtils;
     private final JwtUtils jwtUtils;
     private final JwtProperties jwtProperties;
+    private final UserMapper userMapper;
 
     @PostMapping("/login")
     public GenericResult login(@RequestParam("username") String username, @RequestParam("password") String password,
@@ -54,7 +58,7 @@ public class AuthController {
             return result;
         }
 
-        if (!storedCaptcha.equalsIgnoreCase(captcha)) {
+        if (!storedCaptcha.equalsIgnoreCase(captcha.toUpperCase())) {
             // 验证码错误，增加失败计数
             redisUtils.increment(failKey, 1);
             redisUtils.setExpireTime(failKey, LOCK_TIME, TimeUnit.HOURS);
@@ -70,12 +74,32 @@ public class AuthController {
         // 验证码验证通过，删除验证码
         redisUtils.delete(captchaKey);
 
-        // TODO: 进行用户名密码验证
-        if (!"admin".equals(username) || !"123456".equals(password)) {
+        Map user = userMapper.getUser(Collections.singletonMap("username", username));
+        if (user == null || user.isEmpty()) {
             // 登录失败，增加失败计数
             redisUtils.increment(failKey, 1);
             redisUtils.setExpireTime(failKey, LOCK_TIME, TimeUnit.HOURS);
+            log.info("登录失败，用户不存在，用户名：{}，密码：{}", username,password);
+            result.setFlag("1");
+            result.setPrompt("用户不存在");
+            return result;
+        }
 
+        String status = (String) user.get("status");
+        if (!"0".equals(status)) {
+            // 登录失败，增加失败计数
+            redisUtils.increment(failKey, 1);
+            redisUtils.setExpireTime(failKey, LOCK_TIME, TimeUnit.HOURS);
+            log.info("登录失败，用户状态异常，用户名：{}，密码：{}", username,password);
+            result.setFlag("1");
+            result.setPrompt("用户状态异常");
+            return result;
+        }
+
+        if (!BCrypt.checkpw(password, (String) user.get("password"))) {
+            // 登录失败，增加失败计数
+            redisUtils.increment(failKey, 1);
+            redisUtils.setExpireTime(failKey, LOCK_TIME, TimeUnit.HOURS);
             log.info("登录失败，用户名或密码错误，用户名：{}，密码：{}", username,password);
             result.setFlag("1");
             result.setPrompt("用户名或密码错误");

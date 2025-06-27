@@ -35,7 +35,7 @@ public class CaptchaController {
         String captchaText = kaptchaProducer.createText();
 
         // 存储验证码
-        redisUtils.set(CAPTCHA_KEY_PREFIX + uuid, captchaText, CAPTCHA_EXPIRE_TIME);
+        redisUtils.set(CAPTCHA_KEY_PREFIX + uuid, captchaText.toUpperCase(), CAPTCHA_EXPIRE_TIME);
 
         // 将uuid通过响应头返回给前端
         response.setHeader("X-Captcha-UUID", uuid);

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.mapper.UserMapper">
+    <!-- 插入用户 -->
+    <insert id="addUser" parameterType="hashmap">
+        insert into users
+        (
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="username != null">username,</if>
+            <if test="password != null">password,</if>
+            <if test="email != null">email,</if>
+            <if test="phone != null">phone,</if>
+            <if test="role != null">role,</if>
+            <if test="status != null">status,</if>
+        </trim>
+        ) values (
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="username != null">#{username},</if>
+            <if test="password != null">#{password},</if>
+            <if test="email != null">#{email},</if>
+            <if test="phone != null">#{phone},</if>
+            <if test="role != null">#{role},</if>
+            <if test="status != null">#{status},</if>
+        </trim>
+        )
+    </insert>
+
+    <!-- 查询用户 -->
+    <select id="getUser" parameterType="hashmap" resultType="hashmap">
+        select * from users
+        <where>
+            <if test="id != null">id = #{id}</if>
+            <if test="username != null">and username = #{username}</if>
+            <if test="status != null">and status = #{status}</if>
+        </where>
+    </select>
+
+    <!-- 更新用户 -->
+    <update id="updateUser" parameterType="hashmap">
+        update users
+        <set>
+            <if test="username != null">username = #{username},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="update_time != null">update_time = #{update_time},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- 删除用户 -->
+    <delete id="deleteUser" parameterType="hashmap">
+        delete from users where id = #{id}
+    </delete>
+</mapper>

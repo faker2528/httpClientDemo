@@ -23,7 +23,7 @@ public class KaptchaConfiguration {
 
         // 文本生成配置（数字字母混合）
         properties.put("kaptcha.textproducer.impl", "com.google.code.kaptcha.text.impl.DefaultTextCreator");
-        properties.put("kaptcha.textproducer.char.string", "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        properties.put("kaptcha.textproducer.char.string", "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
         properties.put("kaptcha.textproducer.char.length", "4");
         properties.put("kaptcha.textproducer.char.space", "8");
 
