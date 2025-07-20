@@ -23,7 +23,7 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
         log.info("开始配置跨域...");
         registry.addMapping("/**")
                 // 设置允许的域名，不能使用*，因为withCredentials=true
-                .allowedOriginPatterns("http://localhost:5173")
+                .allowedOriginPatterns("*") //http://localhost:5173
                 .allowCredentials(true) // 允许携带凭证
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
                 .allowedHeaders("*")
